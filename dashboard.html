@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Government Community Portal</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body style="background-image: url(sevaa.jpg);">
+    <!-- Header Section -->
+    <header>Welcome to Our Government Community Portal</header>
+
+    <!-- Navigation -->
+    <nav>
+        <ul>
+            <li><a href="#home">Home</a></li>
+            <li><a href="#services">Services</a></li>
+            <li><a href="#about">About Us</a></li>
+            <li><a href="#contact">Contact</a></li>
+            <li><a href="login.html">Login</a></li>
+            <li><a href="signup.html">Register</a></li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <main>
+        <div class="container">
+            <h2>Welcome to the Dashboard</h2>
+            <p>Here, you can access all community services.</p>
+
+            <!-- Report an Issue Section -->
+            <section id="report">
+                <h2>Report an Issue</h2>
+                <p>Submit issues related to the community. Our team will review and take action.</p>
+                <form id="issueForm">
+                    <label for="issueTitle">Issue Title</label>
+                    <input type="text" id="issueTitle" placeholder="Enter Issue Title" required>
+
+                    <label for="issueCategory">Category</label>
+                    <select id="issueCategory">
+                        <option value="infrastructure">Infrastructure</option>
+                        <option value="sanitation">Sanitation</option>
+                        <option value="law">Law & Order</option>
+                        <option value="other">Other</option>
+                    </select>
+
+                    <label for="issueDescription">Description</label>
+                    <textarea id="issueDescription" placeholder="Describe the issue..." required></textarea>
+
+                    <label for="issueImage">Upload Image (Optional)</label>
+                    <input type="file" id="issueImage" accept="image/*">
+
+                    <button type="submit">Submit Report</button>
+                </form>
+                <p id="successMessage" style="color: green; display: none;">Issue reported successfully!</p>
+            </section>
+
+            <!-- Community Events Section -->
+            <section id="events">
+                <h2>Community Events</h2>
+                <form id="eventForm">
+                    <input type="text" id="eventTitle" placeholder="Event Name" required>
+                    <input type="date" id="eventDate" required>
+                    <textarea id="eventDescription" placeholder="Event Details..." required></textarea>
+                    <button type="submit">Post Event</button>
+                </form>
+                <p id="eventSuccessMessage" style="color: green; display: none;">Event posted successfully!</p>
+                <h3>Upcoming Events</h3>
+                <div id="eventsList"></div>
+            </section>
+
+            <!-- Service Exchange Section -->
+            <section id="services">
+                <h2>Service Exchange</h2>
+                <form id="serviceForm">
+                    <input type="text" id="serviceTitle" placeholder="Service Title" required>
+                    <textarea id="serviceDescription" placeholder="Describe the service..." required></textarea>
+                    <select id="serviceType" required>
+                        <option value="Offer">Offering a Service</option>
+                        <option value="Request">Requesting a Service</option>
+                    </select>
+                    <button type="submit">Post Service</button>
+                </form>
+                <p id="serviceSuccessMessage" style="color: green; display: none;">Service posted successfully!</p>
+                <h3>Available Services</h3>
+                <div id="servicesList"></div>
+            </section>
+
+            <!-- Support Local Businesses -->
+            <section id="local">
+                <h2>Support Local Businesses</h2>
+                <form>
+                    <input type="text" placeholder="Business Name" required>
+                    <textarea placeholder="Business Description..." required></textarea>
+                    <button type="submit">Submit</button>
+                </form>
+            </section>
+
+            <!-- Live Dashboard -->
+            <section id="dashboard-content">
+                <h2>Live Dashboard</h2>
+                <button onclick="refreshDashboard()">Refresh</button>
+                <p>Updated reports and events displayed here.</p>
+            </section>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2025 Government Community Portal. All rights reserved.</p>
+    </footer>
+
+    <!-- WebSockets & JavaScript -->
+    <script src="https://cdn.socket.io/4.4.1/socket.io.min.js"></script>
+    <script>
+        const socket = io("http://localhost:5000"); // Connect to WebSocket server
+
+        document.addEventListener("DOMContentLoaded", function () {
+            const token = localStorage.getItem("token");
+            const userEmail = localStorage.getItem("userEmail");
+
+            if (!token || !userEmail) {
+                alert("You must be logged in to access this page!");
+                window.location.href = "login.html";
+                return;
+            }
+
+            loadIssues();
+            loadEvents();
+            loadServices();
+        });
+
+        // Logout Functionality
+        document.getElementById("logout")?.addEventListener("click", function () {
+            localStorage.removeItem("token");
+            localStorage.removeItem("userEmail");
+            alert("You have been logged out!");
+            window.location.href = "login.html";
+        });
+
+        async function fetchAndRenderData(url, elementId, noDataMessage, formatter) {
+            const response = await fetch(url);
+            const data = await response.json();
+            let html = data.length === 0 ? `<p>${noDataMessage}</p>` : "";
+            data.forEach(item => html += formatter(item));
+            document.getElementById(elementId).innerHTML = html;
+        }
+
+        async function loadIssues() {
+            fetchAndRenderData("http://localhost:5000/api/issues", "issuesList", "No reported issues found.", issue => `
+                <div class="issue">
+                    <h4>${issue.title}</h4>
+                    <p>${issue.description}</p>
+                    <p><b>Status:</b> ${issue.status}</p>
+                    <p><b>Reported On:</b> ${new Date(issue.createdAt).toLocaleString()}</p>
+                </div>`);
+        }
+
+        async function loadEvents() {
+            fetchAndRenderData("http://localhost:5000/api/events", "eventsList", "No upcoming events.", event => `
+                <div class="event">
+                    <h4>${event.title}</h4>
+                    <p>${event.description}</p>
+                    <p><b>Date:</b> ${new Date(event.date).toLocaleDateString()}</p>
+                    <p><b>Organizer:</b> ${event.email}</p>
+                </div>`);
+        }
+
+        async function loadServices() {
+            fetchAndRenderData("http://localhost:5000/api/services", "servicesList", "No services available.", service => `
+                <div class="service">
+                    <h4>${service.title}</h4>
+                    <p>${service.description}</p>
+                    <p><b>Type:</b> ${service.type}</p>
+                    <p><b>Posted By:</b> ${service.email}</p>
+                </div>`);
+        }
+
+        // Real-time updates using WebSockets
+        socket.on("new_issue", loadIssues);
+        socket.on("new_event", loadEvents);
+        socket.on("new_service", loadServices);
+    </script>
+</body>
+
+</html>
